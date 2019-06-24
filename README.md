@@ -20,3 +20,10 @@ Xposed hook库默认使用的是[SandHook](https://github.com/ganyao114/SandHook
  api 'com.wind.xposed:xposed-on-whale:0.1.1'
 ```
 并去掉SandHook初始化代码即可。
+
+# 应用
+二次打包工具[Xpatch](https://github.com/WindySha/Xpatch), 植入Apk中的dex以及so文件都是由此工程编译生成。
+
+# Note
+App需要获取读写外部存储的权限后，才能使用`mnt/sdcard/xposed_config/modules.list`文件来控制Xposed模块的加载  
+否则会默认加载全部Xposed模块，具体使用方法请参考[Xpatch](https://github.com/WindySha/Xpatch)的Readme文档
