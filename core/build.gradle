@@ -1,0 +1,36 @@
+apply plugin: 'com.android.library'
+
+android {
+    compileSdkVersion 28
+    buildToolsVersion "26.0.3"
+
+    defaultConfig {
+        minSdkVersion 21
+        targetSdkVersion 28
+        versionCode 1
+        versionName "1.0"
+    }
+    buildTypes {
+        debug {
+            debuggable true
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+        release {
+            debuggable false
+            minifyEnabled true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+}
+
+dependencies {
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+
+    api 'com.swift.sandhook:hooklib:3.6.0'
+    api 'com.swift.sandhook:xposedcompat:3.6.0'
+
+    // 也可以使用whale hook, 也是xposed api, 只是hook原理不同
+    // source code: https://github.com/WindySha/xposed-hook-based-on-whale
+    // api 'com.wind.xposed:xposed-on-whale:0.1.1'
+}
