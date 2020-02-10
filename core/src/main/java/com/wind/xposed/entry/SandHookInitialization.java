@@ -2,6 +2,9 @@ package com.wind.xposed.entry;
 
 import android.content.Context;
 import android.util.Log;
+
+import com.wind.xposed.entry.util.XpatchUtils;
+
 import java.lang.reflect.Field;
 
 /**
@@ -22,13 +25,13 @@ public class SandHookInitialization {
 //        XposedCompat.isFirstApplication = true;
 
         String SandHookConfigClassName = "com.swift.sandhook.SandHookConfig";
-//        boolean isDebug = XpatchUtils.isApkDebugable(context);
+        boolean isDebug = XpatchUtils.isApkDebugable(context);
 
         try {
             Class SandHookConfigClaszz = Class.forName(SandHookConfigClassName);
             Field DEBUG_field = SandHookConfigClaszz.getDeclaredField("DEBUG");
             DEBUG_field.setAccessible(true);
-            DEBUG_field.set(null, false);
+            DEBUG_field.set(null, isDebug);
         } catch (ClassNotFoundException | NoSuchFieldException | IllegalAccessException e) {
             e.printStackTrace();
         }
