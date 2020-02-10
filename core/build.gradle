@@ -27,10 +27,10 @@ android {
 dependencies {
     implementation fileTree(include: ['*.jar'], dir: 'libs')
 
-    api 'com.swift.sandhook:hooklib:3.6.0'
-    api 'com.swift.sandhook:xposedcompat:3.6.0'
+    api 'com.swift.sandhook:hooklib:4.0.2'
+    api 'com.swift.sandhook:xposedcompat:4.0.2'
 
     // 也可以使用whale hook, 也是xposed api, 只是hook原理不同
     // source code: https://github.com/WindySha/xposed-hook-based-on-whale
-    // api 'com.wind.xposed:xposed-on-whale:0.1.1'
+//     api 'com.wind.xposed:xposed-on-whale:0.1.3'
 }

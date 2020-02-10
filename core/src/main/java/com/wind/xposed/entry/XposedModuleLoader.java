@@ -84,7 +84,6 @@ public class XposedModuleLoader {
                         // TODO: Support Resource hook
                     }
 
-                    return true;
                 } catch (Throwable t) {
                     Log.e(TAG, " error ", t);
                 }
@@ -97,7 +96,7 @@ public class XposedModuleLoader {
             } catch (IOException ignored) {
             }
         }
-        return false;
+        return true;
     }
 
     public static void startInnerHook(ApplicationInfo applicationInfo, ClassLoader originClassLoader) {

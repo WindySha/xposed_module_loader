@@ -10,11 +10,9 @@ import android.text.TextUtils;
 import android.util.Log;
 import android.util.Pair;
 
-import com.swift.sandhook.SandHook;
-import com.swift.sandhook.SandHookConfig;
-import com.swift.sandhook.xposedcompat.XposedCompat;
 import com.wind.xposed.entry.util.FileUtils;
 import com.wind.xposed.entry.util.PackageNameCache;
+import com.wind.xposed.entry.util.ReflectionApiCheck;
 import com.wind.xposed.entry.util.SharedPrefUtils;
 import com.wind.xposed.entry.util.XLog;
 import com.wind.xposed.entry.util.XpatchUtils;
@@ -57,26 +55,14 @@ public class XposedModuleEntry {
             return;
         }
 
+        ReflectionApiCheck.unseal();
+
         Context context = XpatchUtils.createAppContext();
-        initSandHook(context);
+        SandHookInitialization.init(context);
         init(context);
     }
 
-    public static void initSandHook(Context context) {
-        if (context == null) {
-            android.util.Log.e(TAG, "try to init SandHook, but create app context failed !!!!");
-            return;
-        }
-        SandHookConfig.DEBUG = XpatchUtils.isApkDebugable(context);
-        SandHook.passApiCheck();
-
-        XposedCompat.cacheDir = context.getCacheDir();
-        XposedCompat.context = context;
-        XposedCompat.classLoader = context.getClassLoader();
-        XposedCompat.isFirstApplication = true;
-    }
-
-    private static void init(Context context) {
+    public static void init(Context context) {
 
         if (context == null) {
             android.util.Log.e(TAG, "try to init XposedModuleEntry, but create app context failed !!!!");

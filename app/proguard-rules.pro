@@ -3,6 +3,8 @@
     public void init();
 }
 
+-keep class com.wind.xpatch.proxy.**{*;}
+
 -keep class de.robv.android.xposed.**{*;}
 
 -keep class android.app.**{*;}
