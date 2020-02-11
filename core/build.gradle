@@ -9,6 +9,8 @@ android {
         targetSdkVersion 28
         versionCode 1
         versionName "1.0"
+
+        flavorDimensions "default"
     }
     buildTypes {
         debug {
@@ -22,15 +24,22 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
+
+    productFlavors{
+        sandhook {
+        }
+        whale {
+        }
+    }
 }
 
 dependencies {
     implementation fileTree(include: ['*.jar'], dir: 'libs')
 
-    api 'com.swift.sandhook:hooklib:4.0.2'
-    api 'com.swift.sandhook:xposedcompat:4.0.2'
+    sandhookImplementation 'com.swift.sandhook:hooklib:4.0.2'
+    sandhookImplementation 'com.swift.sandhook:xposedcompat:4.0.2'
 
     // 也可以使用whale hook, 也是xposed api, 只是hook原理不同
     // source code: https://github.com/WindySha/xposed-hook-based-on-whale
-//     api 'com.wind.xposed:xposed-on-whale:0.1.3'
+    whaleImplementation 'com.wind.xposed:xposed-on-whale:0.1.3'
 }

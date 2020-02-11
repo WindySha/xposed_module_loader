@@ -1,15 +1,21 @@
 apply plugin: 'com.android.application'
 
+def flavorsDebugNameList = ["sandhookDebug", "whaleDebug"]
+def flavorsDebugMergeDexList = ["mergeDexSandhookDebug", "mergeDexWhaleDebug"]
+def flavorsNameList = ["sandhook", "whale"]
+
 android {
     compileSdkVersion 28
     defaultConfig {
         applicationId "com.storm.wind.xposed"
         minSdkVersion 21
         targetSdkVersion 28
-        versionCode 1
-        versionName "1.0"
+        versionCode version_code as Integer
+        versionName version_name
 
         multiDexEnabled false
+
+        flavorDimensions "default"
 
         ndk {
             abiFilters 'armeabi', 'armeabi-v7a', 'arm64-v8a'
@@ -27,11 +33,52 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
+
+    productFlavors {
+        sandhook {
+        }
+        whale {
+        }
+    }
+
+    applicationVariants.all { variant ->
+        variant.outputs.all {
+            outputFileName = "${variant.getFlavorName()}-${variant.versionName}.apk"
+        }
+    }
+}
+
+task copyWhaleDexFile(type: Copy) {
+    def dexFilePath = "build/intermediates/dex/${flavorsDebugNameList[1]}/${flavorsDebugMergeDexList[1]}/out/classes.dex"
+    from dexFilePath
+    rename "(.*).dex", "classes-${version_name}.dex"
+    into "target/${flavorsNameList[1]}"
+}
+
+task copySandhookDexFile(type: Copy) {
+    def dexFilePath = "build/intermediates/dex/${flavorsDebugNameList[0]}/${flavorsDebugMergeDexList[0]}/out/classes.dex"
+    from dexFilePath
+    rename "(.*).dex", "classes-${version_name}.dex"
+    into "target/${flavorsNameList[0]}"
+}
+
+task copySoFile(type: Copy) {
+    flavorsDebugNameList.forEach {
+        from "build/intermediates/merged_native_libs/${it}/out/lib"
+        rename '(.*).so', '$1'
+        into "target/"
+    }
+}
+
+tasks.whenTaskAdded { task ->
+    if (task.name == 'assembleDebug') {
+        assembleDebug.finalizedBy copyWhaleDexFile
+        copyWhaleDexFile.finalizedBy copySandhookDexFile
+        copySandhookDexFile.finalizedBy copySoFile
+    }
 }
 
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
-//    implementation "com.android.support:support-v4:28.0.0"
-
     implementation project(':core')
 }
