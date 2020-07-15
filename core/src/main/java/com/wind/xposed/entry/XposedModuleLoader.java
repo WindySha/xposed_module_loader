@@ -72,7 +72,7 @@ public class XposedModuleLoader {
                         xc_loadPackageCopyOnWriteSortedSet.add(wrapper);
                         XC_LoadPackage.LoadPackageParam lpparam = new XC_LoadPackage.LoadPackageParam(xc_loadPackageCopyOnWriteSortedSet);
                         lpparam.packageName = currentApplicationInfo.packageName;
-                        lpparam.processName = currentApplicationInfo.processName;
+                        lpparam.processName = (String)Class.forName("android.app.ActivityThread").getDeclaredMethod("currentProcessName").invoke(null);
                         lpparam.classLoader = appClassLoader;
                         lpparam.appInfo = currentApplicationInfo;
                         lpparam.isFirstApplication = true;
