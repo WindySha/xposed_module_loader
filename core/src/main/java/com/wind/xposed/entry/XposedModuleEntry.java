@@ -28,6 +28,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -95,24 +96,24 @@ public class XposedModuleEntry {
 
         // 过滤掉已经打包在apk中的module，避免同一个module被加载了两次
         if (installedModulePathList != null && installedModulePathList.size() > 0) {
-            List<String> packedModulePakcageNameList = null;
+            HashSet<String> packedModulePackageNames = null;
 
             for (String apkPath : modulePathList) {
-                if (packedModulePakcageNameList == null) {
-                    packedModulePakcageNameList = new ArrayList<>();
+                if (packedModulePackageNames == null) {
+                    packedModulePackageNames = new HashSet<>();
                 }
                 String packageName = getPackageNameByPath(context, apkPath);
                 XLog.d(TAG, "Current packed module path ----> " + apkPath + " packageName = " + packageName);
-                packedModulePakcageNameList.add(packageName);
+                packedModulePackageNames.add(packageName);
             }
 
-            if (packedModulePakcageNameList == null || packedModulePakcageNameList.size() == 0) {
+            if (packedModulePackageNames == null || packedModulePackageNames.size() == 0) {
                 modulePathList.addAll(installedModulePathList);
             } else {
                 for (String apkPath : installedModulePathList) {
                     String packageName = getPackageNameByPath(context, apkPath);
                     XLog.d(TAG, "Current installed module path ----> " + apkPath + " packageName = " + packageName);
-                    if (!packedModulePakcageNameList.contains(packageName)) {
+                    if (!packedModulePackageNames.contains(packageName)) {
                         modulePathList.add(apkPath);
                     }
                 }
@@ -120,10 +121,9 @@ public class XposedModuleEntry {
         }
 
         for (String modulePath : modulePathList) {
-            String dexPath = context.getDir("xposed_plugin_dex", Context.MODE_PRIVATE).getAbsolutePath();
             if (!TextUtils.isEmpty(modulePath)) {
-                Log.d(TAG, "Current truely loaded module path ----> " + modulePath);
-                XposedModuleLoader.loadModule(modulePath, dexPath, null, context.getApplicationInfo(), originClassLoader);
+                Log.d(TAG, "Current truly loaded module path ----> " + modulePath);
+                XposedModuleLoader.loadModule(modulePath, context.getApplicationInfo(), originClassLoader);
             }
         }
     }
