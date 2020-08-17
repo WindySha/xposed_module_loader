@@ -3,6 +3,7 @@ package com.wind.xposed.entry;
 import android.content.Context;
 import android.util.Log;
 
+import com.swift.sandhook.SandHook;
 import com.wind.xposed.entry.util.XpatchUtils;
 
 import java.lang.reflect.Field;
@@ -23,6 +24,9 @@ public class SandHookInitialization {
 //        XposedCompat.context = context;
 //        XposedCompat.classLoader = context.getClassLoader();
 //        XposedCompat.isFirstApplication = true;
+        SandHook.disableVMInline();
+        SandHook.tryDisableProfile(context.getPackageName());
+        SandHook.disableDex2oatInline(false);
 
         String SandHookConfigClassName = "com.swift.sandhook.SandHookConfig";
         boolean isDebug = XpatchUtils.isApkDebugable(context);
