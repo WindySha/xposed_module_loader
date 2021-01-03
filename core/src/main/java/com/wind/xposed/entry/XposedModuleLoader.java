@@ -3,6 +3,7 @@ package com.wind.xposed.entry;
 import android.content.pm.ApplicationInfo;
 import android.util.Log;
 
+import com.wind.xposed.entry.util.DelegateLastClassLoader;
 import com.wind.xposed.entry.util.XLog;
 
 import java.io.BufferedReader;
@@ -33,7 +34,7 @@ public class XposedModuleLoader {
             return false;
         }
 
-        ClassLoader mcl = new DexClassLoader(moduleApkPath, moduleOdexDir, moduleLibPath, appClassLoader);
+        ClassLoader mcl = new DelegateLastClassLoader(moduleApkPath, moduleLibPath, XposedBridge.BOOTCLASSLOADER);
         InputStream is = mcl.getResourceAsStream("assets/xposed_init");
         if (is == null) {
             Log.i(TAG, "assets/xposed_init not found in the APK");
