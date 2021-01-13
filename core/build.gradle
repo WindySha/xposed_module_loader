@@ -36,8 +36,14 @@ android {
 dependencies {
     implementation fileTree(include: ['*.jar'], dir: 'libs')
 
-    sandhookImplementation 'com.swift.sandhook:hooklib:4.0.2'
-    sandhookImplementation 'com.swift.sandhook:xposedcompat:4.0.2'
+//    sandhookImplementation 'com.swift.sandhook:hooklib:4.2.0'
+//    sandhookImplementation 'com.swift.sandhook:xposedcompat:4.2.0'
+
+    sandhookImplementation(name: 'hooklib', ext: 'aar')
+    sandhookImplementation(name: 'xposedcompat', ext: 'aar')
+    sandhookImplementation 'com.jakewharton.android.repackaged:dalvik-dx:9.0.0_r3'
+
+    implementation 'me.weishu:free_reflection:3.0.1'
 
     // 也可以使用whale hook, 也是xposed api, 只是hook原理不同
     // source code: https://github.com/WindySha/xposed-hook-based-on-whale

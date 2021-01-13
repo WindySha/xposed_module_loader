@@ -1,5 +1,6 @@
 package com.wind.xposed.entry;
 
+import android.annotation.SuppressLint;
 import android.content.pm.ApplicationInfo;
 import android.util.Log;
 
@@ -10,6 +11,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.lang.reflect.Method;
 
 import dalvik.system.DexClassLoader;
 import de.robv.android.xposed.IXposedHookInitPackageResources;
@@ -72,7 +74,7 @@ public class XposedModuleLoader {
                         xc_loadPackageCopyOnWriteSortedSet.add(wrapper);
                         XC_LoadPackage.LoadPackageParam lpparam = new XC_LoadPackage.LoadPackageParam(xc_loadPackageCopyOnWriteSortedSet);
                         lpparam.packageName = currentApplicationInfo.packageName;
-                        lpparam.processName = (String)Class.forName("android.app.ActivityThread").getDeclaredMethod("currentProcessName").invoke(null);
+                        lpparam.processName = getCurrentProcessName(currentApplicationInfo);;
                         lpparam.classLoader = appClassLoader;
                         lpparam.appInfo = currentApplicationInfo;
                         lpparam.isFirstApplication = true;
@@ -108,11 +110,29 @@ public class XposedModuleLoader {
         XC_LoadPackage.LoadPackageParam lpparam = new XC_LoadPackage.LoadPackageParam(xc_loadPackageCopyOnWriteSortedSet);
 
         lpparam.packageName = applicationInfo.packageName;
-        lpparam.processName = applicationInfo.processName;
+        lpparam.processName = getCurrentProcessName(applicationInfo);
         lpparam.classLoader = originClassLoader;
         lpparam.appInfo = applicationInfo;
         lpparam.isFirstApplication = true;
 
         XC_LoadPackage.callAll(lpparam);
+    }
+
+    private static String currentProcessName = null;
+
+    @SuppressLint("DiscouragedPrivateApi")
+    private static String getCurrentProcessName(ApplicationInfo applicationInfo) {
+        if (currentProcessName != null) return currentProcessName;
+
+        currentProcessName = applicationInfo.packageName;
+        try {
+            Class activityThread_clazz = Class.forName("android.app.ActivityThread");
+            Method method = activityThread_clazz.getDeclaredMethod("currentProcessName");
+            method.setAccessible(true);
+            currentProcessName = (String) method.invoke(null);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return currentProcessName;
     }
 }

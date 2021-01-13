@@ -2,11 +2,11 @@ package com.wind.xposed.entry;
 
 import android.content.Context;
 import android.util.Log;
-
-import com.swift.sandhook.SandHook;
 import com.wind.xposed.entry.util.XpatchUtils;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 
 /**
  * @author Windysha
@@ -19,14 +19,14 @@ public class SandHookInitialization {
             Log.e("SandHookInitialization", "try to init SandHook, but app context is null !!!!");
             return;
         }
+
+        sandHookCompat(context);
+
 //        SandHookConfig.DEBUG = XpatchUtils.isApkDebugable(context);
 //        XposedCompat.cacheDir = context.getCacheDir();
 //        XposedCompat.context = context;
 //        XposedCompat.classLoader = context.getClassLoader();
 //        XposedCompat.isFirstApplication = true;
-        SandHook.disableVMInline();
-        SandHook.tryDisableProfile(context.getPackageName());
-        SandHook.disableDex2oatInline(false);
 
         String SandHookConfigClassName = "com.swift.sandhook.SandHookConfig";
         boolean isDebug = XpatchUtils.isApkDebugable(context);
@@ -61,6 +61,32 @@ public class SandHookInitialization {
             isFirstApplication_field.setAccessible(true);
             isFirstApplication_field.set(null, true);
         } catch (ClassNotFoundException | NoSuchFieldException | IllegalAccessException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private static void sandHookCompat(Context context) {
+//        SandHook.disableVMInline();
+//        SandHook.tryDisableProfile(context.getPackageName());
+//        SandHook.disableDex2oatInline(false);
+
+        String className = "com.swift.sandhook.SandHook";
+        try {
+            Class sandHook_Clazz = Class.forName(className);
+
+            Method disableVMInline_method = sandHook_Clazz.getDeclaredMethod("disableVMInline");
+            disableVMInline_method.setAccessible(true);
+            disableVMInline_method.invoke(null);
+
+            Method tryDisableProfile_method = sandHook_Clazz.getDeclaredMethod("tryDisableProfile");
+            tryDisableProfile_method.setAccessible(true);
+            tryDisableProfile_method.invoke(null, context.getPackageName());
+
+            Method disableDex2oatInline_method = sandHook_Clazz.getDeclaredMethod("disableDex2oatInline");
+            disableDex2oatInline_method.setAccessible(true);
+            disableDex2oatInline_method.invoke(null, false);
+
+        } catch (ClassNotFoundException | NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
             e.printStackTrace();
         }
     }

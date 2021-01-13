@@ -1,7 +1,7 @@
 apply plugin: 'com.android.application'
 
-def flavorsDebugNameList = ["sandhookDebug", "whaleDebug"]
-def flavorsDebugMergeDexList = ["mergeDexSandhookDebug", "mergeDexWhaleDebug"]
+def flavorsDebugNameList = ["sandhookRelease", "whaleDRelease"]
+def flavorsDebugMergeDexList = ["mergeDexSandhookRelease", "mergeDexWhaleRelease"]
 def flavorsNameList = ["sandhook", "whale"]
 
 android {
@@ -9,7 +9,7 @@ android {
     defaultConfig {
         applicationId "com.storm.wind.xposed"
         minSdkVersion 21
-        targetSdkVersion 28
+        targetSdkVersion 30
         versionCode version_code as Integer
         versionName version_name
 
@@ -50,6 +50,9 @@ android {
 
 task copyWhaleDexFile(type: Copy) {
     def dexFilePath = "build/intermediates/dex/${flavorsDebugNameList[1]}/${flavorsDebugMergeDexList[1]}/out/classes.dex"
+    if (!new File(dexFilePath).exists()) {
+        dexFilePath = "build/intermediates/dex/${flavorsDebugNameList[1]}/${flavorsDebugMergeDexList[1]}/classes.dex"
+    }
     from dexFilePath
     rename "(.*).dex", "classes-${version_name}.dex"
     into "target/${flavorsNameList[1]}"
@@ -57,6 +60,9 @@ task copyWhaleDexFile(type: Copy) {
 
 task copySandhookDexFile(type: Copy) {
     def dexFilePath = "build/intermediates/dex/${flavorsDebugNameList[0]}/${flavorsDebugMergeDexList[0]}/out/classes.dex"
+    if (!new File(dexFilePath).exists()) {
+        dexFilePath = "build/intermediates/dex/${flavorsDebugNameList[0]}/${flavorsDebugMergeDexList[0]}/classes.dex"
+    }
     from dexFilePath
     rename "(.*).dex", "classes-${version_name}.dex"
     into "target/${flavorsNameList[0]}"
@@ -71,8 +77,8 @@ task copySoFile(type: Copy) {
 }
 
 tasks.whenTaskAdded { task ->
-    if (task.name == 'assembleDebug') {
-        assembleDebug.finalizedBy copyWhaleDexFile
+    if (task.name == 'assembleRelease') {
+        assembleRelease.finalizedBy copyWhaleDexFile
         copyWhaleDexFile.finalizedBy copySandhookDexFile
         copySandhookDexFile.finalizedBy copySoFile
     }

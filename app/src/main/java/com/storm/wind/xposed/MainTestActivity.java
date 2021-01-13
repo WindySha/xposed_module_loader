@@ -8,7 +8,7 @@ import android.os.Bundle;
 //import android.support.v4.app.ActivityCompat;
 import android.view.View;
 
-public class MainActivity extends Activity {
+public class MainTestActivity extends Activity {
 
     //读写权限
     private static String[] PERMISSIONS_STORAGE = {

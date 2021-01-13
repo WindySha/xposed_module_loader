@@ -12,7 +12,6 @@ import android.util.Pair;
 
 import com.wind.xposed.entry.util.FileUtils;
 import com.wind.xposed.entry.util.PackageNameCache;
-import com.wind.xposed.entry.util.ReflectionApiCheck;
 import com.wind.xposed.entry.util.SharedPrefUtils;
 import com.wind.xposed.entry.util.XLog;
 import com.wind.xposed.entry.util.XpatchUtils;
@@ -32,6 +31,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import de.robv.android.xposed.XposedHelper;
+import me.weishu.reflection.Reflection;
 
 /**
  * Created by Wind
@@ -55,9 +55,8 @@ public class XposedModuleEntry {
             return;
         }
 
-        ReflectionApiCheck.unseal();
-
         Context context = XpatchUtils.createAppContext();
+        Reflection.unseal(context);
         SandHookInitialization.init(context);
         init(context);
     }
@@ -168,7 +167,8 @@ public class XposedModuleEntry {
 
         boolean configFileExist = configFileExist();
 
-        for (PackageInfo pkg : pm.getInstalledPackages(PackageManager.GET_META_DATA)) {
+        List<PackageInfo> packageInfoList = pm.getInstalledPackages(PackageManager.GET_META_DATA);
+        for (PackageInfo pkg : packageInfoList) {
             ApplicationInfo app = pkg.applicationInfo;
             if (!app.enabled)
                 continue;
