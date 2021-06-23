@@ -2,6 +2,7 @@ package com.wind.xposed.entry;
 
 import android.content.Context;
 import android.util.Log;
+
 import com.wind.xposed.entry.util.XpatchUtils;
 
 import java.lang.reflect.Field;
@@ -14,7 +15,7 @@ import java.lang.reflect.Method;
 public class SandHookInitialization {
 
     public static void init(Context context) {
-
+        Log.d("SandHookInitialization", "start init");
         if (context == null) {
             Log.e("SandHookInitialization", "try to init SandHook, but app context is null !!!!");
             return;
@@ -71,23 +72,36 @@ public class SandHookInitialization {
 //        SandHook.disableDex2oatInline(false);
 
         String className = "com.swift.sandhook.SandHook";
+        Class sandHook_Clazz = null;
         try {
-            Class sandHook_Clazz = Class.forName(className);
+            sandHook_Clazz = Class.forName(className);
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+        if (sandHook_Clazz == null) return;
 
+        try {
             Method disableVMInline_method = sandHook_Clazz.getDeclaredMethod("disableVMInline");
             disableVMInline_method.setAccessible(true);
             disableVMInline_method.invoke(null);
+        } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
+            Log.e("SandHookInitialization", " exception: ", e);
+        }
 
-            Method tryDisableProfile_method = sandHook_Clazz.getDeclaredMethod("tryDisableProfile");
+        try {
+            Method tryDisableProfile_method = sandHook_Clazz.getDeclaredMethod("tryDisableProfile", String.class);
             tryDisableProfile_method.setAccessible(true);
             tryDisableProfile_method.invoke(null, context.getPackageName());
+        } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
+            Log.e("SandHookInitialization", " exception: ", e);
+        }
 
-            Method disableDex2oatInline_method = sandHook_Clazz.getDeclaredMethod("disableDex2oatInline");
+        try {
+            Method disableDex2oatInline_method = sandHook_Clazz.getDeclaredMethod("disableDex2oatInline", boolean.class);
             disableDex2oatInline_method.setAccessible(true);
             disableDex2oatInline_method.invoke(null, false);
-
-        } catch (ClassNotFoundException | NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
-            e.printStackTrace();
+        } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
+            Log.e("SandHookInitialization", " exception: ", e);
         }
     }
 }
