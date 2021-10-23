@@ -3,6 +3,9 @@ package com.wind.xposed.entry;
 import android.content.Context;
 import android.util.Log;
 
+import com.swift.sandhook.SandHook;
+import com.swift.sandhook.SandHookConfig;
+import com.swift.sandhook.xposedcompat.XposedCompat;
 import com.wind.xposed.entry.util.XpatchUtils;
 
 import java.lang.reflect.Field;
@@ -23,13 +26,13 @@ public class SandHookInitialization {
 
         sandHookCompat(context);
 
-//        SandHookConfig.DEBUG = XpatchUtils.isApkDebugable(context);
-//        XposedCompat.cacheDir = context.getCacheDir();
-//        XposedCompat.context = context;
-//        XposedCompat.classLoader = context.getClassLoader();
-//        XposedCompat.isFirstApplication = true;
+        SandHookConfig.DEBUG = XpatchUtils.isApkDebugable(context);
+        XposedCompat.cacheDir = context.getCacheDir();
+        XposedCompat.context = context;
+        XposedCompat.classLoader = context.getClassLoader();
+        XposedCompat.isFirstApplication = true;
 
-        String SandHookConfigClassName = "com.swift.sandhook.SandHookConfig";
+        /*String SandHookConfigClassName = "com.swift.sandhook.SandHookConfig";
         boolean isDebug = XpatchUtils.isApkDebugable(context);
 
         try {
@@ -63,15 +66,15 @@ public class SandHookInitialization {
             isFirstApplication_field.set(null, true);
         } catch (ClassNotFoundException | NoSuchFieldException | IllegalAccessException e) {
             e.printStackTrace();
-        }
+        }*/
     }
 
     private static void sandHookCompat(Context context) {
-//        SandHook.disableVMInline();
-//        SandHook.tryDisableProfile(context.getPackageName());
-//        SandHook.disableDex2oatInline(false);
+        SandHook.disableVMInline();
+        SandHook.tryDisableProfile(context.getPackageName());
+        SandHook.disableDex2oatInline(false);
 
-        String className = "com.swift.sandhook.SandHook";
+       /* String className = "com.swift.sandhook.SandHook";
         Class sandHook_Clazz = null;
         try {
             sandHook_Clazz = Class.forName(className);
@@ -102,6 +105,6 @@ public class SandHookInitialization {
             disableDex2oatInline_method.invoke(null, false);
         } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
             Log.e("SandHookInitialization", " exception: ", e);
-        }
+        }*/
     }
 }

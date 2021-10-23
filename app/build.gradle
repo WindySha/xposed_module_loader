@@ -1,8 +1,10 @@
-apply plugin: 'com.android.application'
+plugins {
+    id 'com.android.application'
+}
 
-def flavorsDebugNameList = ["sandhookRelease", "whaleDRelease"]
-def flavorsDebugMergeDexList = ["mergeDexSandhookRelease", "mergeDexWhaleRelease"]
-def flavorsNameList = ["sandhook", "whale"]
+def flavorsDebugNameList = ["release"]
+def flavorsDebugMergeDexList = ["mergeDexRelease"]
+def flavorsNameList = ["sandhook"]
 
 android {
     compileSdkVersion 28
@@ -14,8 +16,6 @@ android {
         versionName version_name
 
         multiDexEnabled false
-
-        flavorDimensions "default"
 
         ndk {
             abiFilters 'armeabi-v7a', 'arm64-v8a'
@@ -34,28 +34,11 @@ android {
         }
     }
 
-    productFlavors {
-        sandhook {
-        }
-        whale {
-        }
-    }
-
-    applicationVariants.all { variant ->
-        variant.outputs.all {
-            outputFileName = "${variant.getFlavorName()}-${variant.versionName}.apk"
-        }
-    }
-}
-
-task copyWhaleDexFile(type: Copy) {
-    def dexFilePath = "build/intermediates/dex/${flavorsDebugNameList[1]}/${flavorsDebugMergeDexList[1]}/out/classes.dex"
-    if (!new File(dexFilePath).exists()) {
-        dexFilePath = "build/intermediates/dex/${flavorsDebugNameList[1]}/${flavorsDebugMergeDexList[1]}/classes.dex"
-    }
-    from dexFilePath
-    rename "(.*).dex", "classes-${version_name}.dex"
-    into "target/${flavorsNameList[1]}"
+//    applicationVariants.all { variant ->
+//        variant.outputs.all {
+//            outputFileName = "${variant.getFlavorName()}-${variant.versionName}.apk"
+//        }
+//    }
 }
 
 task copySandhookDexFile(type: Copy) {
@@ -64,22 +47,21 @@ task copySandhookDexFile(type: Copy) {
         dexFilePath = "build/intermediates/dex/${flavorsDebugNameList[0]}/${flavorsDebugMergeDexList[0]}/classes.dex"
     }
     from dexFilePath
-    rename "(.*).dex", "classes-${version_name}.dex"
+    rename "(.*).dex", "classes.dex"
     into "target/${flavorsNameList[0]}"
 }
 
 task copySoFile(type: Copy) {
     flavorsDebugNameList.forEach {
         from "build/intermediates/merged_native_libs/${it}/out/lib"
-        rename '(.*).so', '$1'
+        rename '(.*).so', '$1.so'
         into "target/"
     }
 }
 
 tasks.whenTaskAdded { task ->
     if (task.name == 'assembleRelease') {
-        assembleRelease.finalizedBy copyWhaleDexFile
-        copyWhaleDexFile.finalizedBy copySandhookDexFile
+        assembleRelease.finalizedBy copySandhookDexFile
         copySandhookDexFile.finalizedBy copySoFile
     }
 }

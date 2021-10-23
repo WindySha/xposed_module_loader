@@ -4,7 +4,7 @@ import com.wind.xposed.entry.BuildConfig;
 
 public class XLog {
 
-    private static boolean enableLog = BuildConfig.DEBUG;
+    private static boolean enableLog = true;
 
     public static void d(String tag, String msg) {
         if (enableLog) {

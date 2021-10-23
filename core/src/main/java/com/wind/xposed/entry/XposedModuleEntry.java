@@ -10,7 +10,9 @@ import android.text.TextUtils;
 import android.util.Log;
 import android.util.Pair;
 
+import com.swift.sandhook.SandHook;
 import com.wind.xposed.entry.util.FileUtils;
+import com.wind.xposed.entry.util.NativeLibraryHelperCompat;
 import com.wind.xposed.entry.util.PackageNameCache;
 import com.wind.xposed.entry.util.SharedPrefUtils;
 import com.wind.xposed.entry.util.XLog;
@@ -31,7 +33,6 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import de.robv.android.xposed.XposedHelper;
-import me.weishu.reflection.Reflection;
 
 /**
  * Created by Wind
@@ -56,7 +57,6 @@ public class XposedModuleEntry {
         }
 
         Context context = XpatchUtils.createAppContext();
-        Reflection.unseal(context);
         SandHookInitialization.init(context);
         init(context);
     }
@@ -70,21 +70,37 @@ public class XposedModuleEntry {
 
         appContext = context;
 
+        initSELinux(context);
+        SharedPrefUtils.init(context);
+        ClassLoader originClassLoader = context.getClassLoader();
+
+        // 加载代码本身的hook功能，一般情况下用不到
+//        XposedModuleLoader.startInnerHook(context.getApplicationInfo(), originClassLoader);
+
+        String appPrivateDir = context.getFilesDir().getParentFile().getAbsolutePath();
+        String xposedPluginFilePath = appPrivateDir + "/xposed_injection/plugin";
+        String pluginApkFile = xposedPluginFilePath + "/xposed_plugin.apk";
+        if (new File(pluginApkFile).exists()) {
+            String soFilePath;
+            if (NativeLibraryHelperCompat.is64bit()) {
+                soFilePath = xposedPluginFilePath + "/lib/arm64";
+            } else {
+                soFilePath = xposedPluginFilePath + "/lib/arm";
+            }
+            XpatchUtils.ensurePathExist(soFilePath);
+            NativeLibraryHelperCompat.copyNativeBinaries(new File(pluginApkFile), new File(soFilePath));
+
+            String dexPath = context.getDir("xposed_plugin_dex", Context.MODE_PRIVATE).getAbsolutePath();
+            XposedModuleLoader.loadModule(pluginApkFile, dexPath, soFilePath, context.getApplicationInfo(), originClassLoader);
+            return;
+        }
+
         if (Build.VERSION.SDK_INT > Build.VERSION_CODES.LOLLIPOP) {
             if (!FileUtils.isFilePermissionGranted(context)) {
                 android.util.Log.e(TAG, "File permission is not granted, can not control xposed module by file ->" +
                         XPOSED_MODULE_FILE_PATH);
             }
         }
-
-        initSELinux(context);
-
-        SharedPrefUtils.init(context);
-
-        ClassLoader originClassLoader = context.getClassLoader();
-
-        // 加载代码本身的hook功能，一般情况下用不到
-        XposedModuleLoader.startInnerHook(context.getApplicationInfo(), originClassLoader);
 
         List<String> modulePathList = new ArrayList<>();
 

@@ -3,6 +3,7 @@ package com.wind.xposed.entry.util;
 import android.content.Context;
 import android.content.pm.ApplicationInfo;
 
+import java.io.File;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -53,4 +54,12 @@ public class XpatchUtils {
         }
         return false;
     }
+
+    public static final void ensurePathExist(String path) {
+        File file = new File(path);
+        if (!file.exists()) {
+            file.mkdirs();
+        }
+    }
+
 }

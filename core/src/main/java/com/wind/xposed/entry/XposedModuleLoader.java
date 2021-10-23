@@ -35,13 +35,15 @@ public class XposedModuleLoader {
             return false;
         }
 
-        ClassLoader mcl = new DexClassLoader(moduleApkPath, moduleOdexDir, moduleLibPath, appClassLoader);
-        InputStream is = mcl.getResourceAsStream("assets/xposed_init");
+        // use system classloader to load asset to avoid the app has file assets/xposed_init
+        ClassLoader assetLoader = new DexClassLoader(moduleApkPath, moduleOdexDir, moduleLibPath, ClassLoader.getSystemClassLoader());
+        InputStream is = assetLoader.getResourceAsStream("assets/xposed_init");
         if (is == null) {
             Log.i(TAG, "assets/xposed_init not found in the APK");
             return false;
         }
 
+        ClassLoader mcl = new DexClassLoader(moduleApkPath, moduleOdexDir, moduleLibPath, appClassLoader);
         BufferedReader moduleClassesReader = new BufferedReader(new InputStreamReader(is));
         try {
             String moduleClassName;
