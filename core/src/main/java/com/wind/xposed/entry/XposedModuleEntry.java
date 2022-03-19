@@ -45,15 +45,15 @@ public class XposedModuleEntry {
     private static AtomicBoolean hasInited = new AtomicBoolean(false);
     private static Context appContext;
 
-    public static void init() {
-        init(null, true);
+    public static void init(Context context) {
+        init(context, null, true);
     }
 
-    public static void init(List<String> moduleFilePathList) {
-        init(moduleFilePathList, false);
+    public static void init(Context context, List<String> moduleFilePathList) {
+        init(context, moduleFilePathList, false);
     }
 
-    public static void init(String fileDir) {
+    public static void init(Context context, String fileDir) {
         File fileParent = new File(fileDir);
         if (!fileParent.exists()) {
             return;
@@ -68,10 +68,10 @@ public class XposedModuleEntry {
                 }
             }
         }
-        init(modulePathList, false);
+        init(context, modulePathList, false);
     }
 
-    public static void init(List<String> modulePathList, boolean enableLoadInstalledModules) {
+    public static void init(Context context, List<String> modulePathList, boolean enableLoadInstalledModules) {
         if (!hasInited.compareAndSet(false, true)) {
             Log.e(TAG, " Xposed module has been loaded !!!");
             return;
@@ -80,7 +80,9 @@ public class XposedModuleEntry {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             VMRuntime.setHiddenApiExemptions(new String[]{"L"});
         }
-        Context context = XpatchUtils.createAppContext();
+        if (context == null) {
+            context = XpatchUtils.createAppContext();
+        }
         SandHookInitialization.init(context);
 
         if ((modulePathList == null || modulePathList.size() == 0) && !enableLoadInstalledModules) {

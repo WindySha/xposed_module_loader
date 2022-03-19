@@ -40,6 +40,6 @@ android {
 
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
-    implementation project(':core')
-//    implementation("io.github.windysha:xposed_module_loader:1.0.3")
+//    implementation project(':core')
+    implementation("io.github.windysha:xposed_module_loader:1.0.4")
 }

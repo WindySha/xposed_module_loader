@@ -5,7 +5,7 @@ ext {
     PUBLISH_GROUP_ID = 'io.github.windysha'
     PUBLISH_ARTIFACT_ID = 'xposed_module_loader'
     PUBLISH_ARTIFACT_NAME = 'Xposed Module Loader.'
-    PUBLISH_VERSION_NAME = '1.0.3'
+    PUBLISH_VERSION_NAME = '1.0.4'
 
     POM_URL = 'https://github.com/WindySha/xposed_module_loader'
     POM_DESCRIPTION = 'This is a library that can load xposed module from any path or installed xposed module.'
