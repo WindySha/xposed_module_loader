@@ -1,29 +1,103 @@
-# 简介
-这是App加载已安装的Xposed Modules的一个库。  
-其中，
-> * app : App Sample代码，应用启动后，就会默认加载系统里所有已安装的Xposed Modules;  
-> * core : 加载代码，主要逻辑是读取所有已安装的Xposed Module，并构建classloader加载其入口代码。
+![](https://img.shields.io/badge/license-Apache2.0-brightgreen.svg?style=flat)
+![](https://img.shields.io/badge/release-1.0.4-red.svg?style=flat)
+![](https://img.shields.io/badge/Android-5%20--%2012-blue.svg?style=flat)
+![](https://img.shields.io/badge/arch-armeabi--v7a%20%7C%20arm64--v8a-blue.svg?style=flat)
 
-# 使用
-只需要在Application中加入：
+# Introduction
+This is a library used to load xposed module files.   
+
+# Features
+
+* Support loading xposed modules by the apk file path;  
+* Support loading all the xposed modules installed in the device;
+* Support loading all the native libraries in the xposed modules;
+* Support importing xposed styled java hooking framework to android projects;
+
+
+# Usage
+## 1. Add dependency to build.gradle file
+
+This tool is published on [Maven Central](https://search.maven.org/).
+
+```Gradle
+allprojects {
+    repositories {
+        mavenCentral()
+    }
+}
 ```
-XposedModuleEntry.init()
+
+```Gradle
+android {
+    defaultConfig {
+        ndk {
+            abiFilters 'armeabi-v7a', 'arm64-v8a'
+        }
+    }
+}
+
+dependencies {
+    implementation 'io.github.windysha:xposed_module_loader:1.0.4'
+}
 ```
 
-# Hook框架
-Xposed hook库默认使用的是[SandHook](https://github.com/ganyao114/SandHook)  
-假如Hook失败，也可以尝试更改为[whale](https://github.com/asLody/whale), 只需要修改core/build.gradle文件：
+## 2. Add init code to the Application file.
+* Load xposed modules by file paths:
 ```
- // api 'com.swift.sandhook:hooklib:3.6.0'
- // api 'com.swift.sandhook:xposedcompat:3.6.0'
-
- api 'com.wind.xposed:xposed-on-whale:0.1.1'
+    @Override
+    protected void attachBaseContext(Context base) {
+        List<String> list = new ArrayList<String>() {
+            {
+                add("/mnt/sdcard/xposed_module.apk");  // app need to hava permission read files in the sdcard.
+                add("/data/data/com.storm.wind.xposed/files/xposed_module.apk");
+            }
+        };
+        XposedModuleEntry.init(base, list);
+        super.attachBaseContext(base);
+    }
 ```
-并去掉SandHook初始化代码即可。
+* Load xposed modules by file directory:
+```
+    @Override
+    protected void attachBaseContext(Context base) {
+        // all xposed module files in the dir /data/data/package_name/ will be loaded.
+        XposedModuleEntry.init(base, "/data/data/package_name/");
+        super.attachBaseContext(base);
+    }
+```
+* Load all xposed modules installed in the devices:
+```
+    @Override
+    protected void attachBaseContext(Context base) {
+        XposedModuleEntry.init(base);
+        super.attachBaseContext(base);
+    }
+```
+* Only init java hook framework, do not load any xposed modules:
+```
+    @Override
+    protected void attachBaseContext(Context base) {
+        XposedModuleEntry.init(base, null, false);
+        super.attachBaseContext(base);
+    }
+```
 
-# 应用
-二次打包工具[Xpatch](https://github.com/WindySha/Xpatch), 植入Apk中的dex以及so文件都是由此工程编译生成。
+# Applied
+Early version of [Xpatch](https://github.com/WindySha/Xpatch) use this library to load xposed modules。
 
-# Note
-App需要获取读写外部存储的权限后，才能使用`mnt/sdcard/xposed_config/modules.list`文件来控制Xposed模块的加载  
-否则会默认加载全部Xposed模块，具体使用方法请参考[Xpatch](https://github.com/WindySha/Xpatch)的Readme文档
+# License
+```
+Copyright 2021 WindySha
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+   http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+```
