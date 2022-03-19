@@ -1,8 +1,6 @@
-apply plugin: 'com.android.application'
-
-def flavorsDebugNameList = ["sandhookRelease", "whaleDRelease"]
-def flavorsDebugMergeDexList = ["mergeDexSandhookRelease", "mergeDexWhaleRelease"]
-def flavorsNameList = ["sandhook", "whale"]
+plugins {
+    id 'com.android.application'
+}
 
 android {
     compileSdkVersion 28
@@ -15,10 +13,9 @@ android {
 
         multiDexEnabled false
 
-        flavorDimensions "default"
-
         ndk {
-            abiFilters 'armeabi-v7a', 'arm64-v8a'
+//            abiFilters 'armeabi-v7a', 'arm64-v8a'
+            abiFilters 'armeabi-v7a'
         }
     }
     buildTypes {
@@ -34,57 +31,15 @@ android {
         }
     }
 
-    productFlavors {
-        sandhook {
-        }
-        whale {
-        }
-    }
-
-    applicationVariants.all { variant ->
-        variant.outputs.all {
-            outputFileName = "${variant.getFlavorName()}-${variant.versionName}.apk"
-        }
-    }
-}
-
-task copyWhaleDexFile(type: Copy) {
-    def dexFilePath = "build/intermediates/dex/${flavorsDebugNameList[1]}/${flavorsDebugMergeDexList[1]}/out/classes.dex"
-    if (!new File(dexFilePath).exists()) {
-        dexFilePath = "build/intermediates/dex/${flavorsDebugNameList[1]}/${flavorsDebugMergeDexList[1]}/classes.dex"
-    }
-    from dexFilePath
-    rename "(.*).dex", "classes-${version_name}.dex"
-    into "target/${flavorsNameList[1]}"
-}
-
-task copySandhookDexFile(type: Copy) {
-    def dexFilePath = "build/intermediates/dex/${flavorsDebugNameList[0]}/${flavorsDebugMergeDexList[0]}/out/classes.dex"
-    if (!new File(dexFilePath).exists()) {
-        dexFilePath = "build/intermediates/dex/${flavorsDebugNameList[0]}/${flavorsDebugMergeDexList[0]}/classes.dex"
-    }
-    from dexFilePath
-    rename "(.*).dex", "classes-${version_name}.dex"
-    into "target/${flavorsNameList[0]}"
-}
-
-task copySoFile(type: Copy) {
-    flavorsDebugNameList.forEach {
-        from "build/intermediates/merged_native_libs/${it}/out/lib"
-        rename '(.*).so', '$1'
-        into "target/"
-    }
-}
-
-tasks.whenTaskAdded { task ->
-    if (task.name == 'assembleRelease') {
-        assembleRelease.finalizedBy copyWhaleDexFile
-        copyWhaleDexFile.finalizedBy copySandhookDexFile
-        copySandhookDexFile.finalizedBy copySoFile
-    }
+//    applicationVariants.all { variant ->
+//        variant.outputs.all {
+//            outputFileName = "${variant.getFlavorName()}-${variant.versionName}.apk"
+//        }
+//    }
 }
 
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
     implementation project(':core')
+//    implementation("io.github.windysha:xposed_module_loader:1.0.3")
 }

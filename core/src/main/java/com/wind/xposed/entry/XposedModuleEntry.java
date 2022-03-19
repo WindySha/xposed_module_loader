@@ -11,8 +11,11 @@ import android.util.Log;
 import android.util.Pair;
 
 import com.wind.xposed.entry.util.FileUtils;
+import com.wind.xposed.entry.util.NativeLibraryHelperCompat;
 import com.wind.xposed.entry.util.PackageNameCache;
+import com.wind.xposed.entry.util.PluginNativeLibExtractor;
 import com.wind.xposed.entry.util.SharedPrefUtils;
+import com.wind.xposed.entry.util.VMRuntime;
 import com.wind.xposed.entry.util.XLog;
 import com.wind.xposed.entry.util.XpatchUtils;
 
@@ -31,37 +34,63 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import de.robv.android.xposed.XposedHelper;
-import me.weishu.reflection.Reflection;
 
 /**
  * Created by Wind
  */
 public class XposedModuleEntry {
 
-    private static final String TAG = XposedModuleEntry.class.getSimpleName();
+    private static final String TAG = "XposedModuleEntry";
 
     private static AtomicBoolean hasInited = new AtomicBoolean(false);
-
-    private static final String DIR_BASE = Environment.getExternalStorageDirectory().getAbsolutePath();
-
-    private static final String XPOSED_MODULE_FILE_PATH = "xposed_config/modules.list";
-
     private static Context appContext;
 
-    private static final String XPOSED_MODULE_FILE_NAME_PREFIX = "libxpatch_xp_module_";
-
     public static void init() {
-        if (!hasInited.compareAndSet(false, true)) {
+        init(null, true);
+    }
+
+    public static void init(List<String> moduleFilePathList) {
+        init(moduleFilePathList, false);
+    }
+
+    public static void init(String fileDir) {
+        File fileParent = new File(fileDir);
+        if (!fileParent.exists()) {
             return;
         }
 
-        Context context = XpatchUtils.createAppContext();
-        Reflection.unseal(context);
-        SandHookInitialization.init(context);
-        init(context);
+        List<String> modulePathList = new ArrayList<>();
+        File[] childFileList = fileParent.listFiles();
+        if (childFileList != null && childFileList.length > 0) {
+            for (File file : childFileList) {
+                if (file.isFile()) {
+                    modulePathList.add(file.getAbsolutePath());
+                }
+            }
+        }
+        init(modulePathList, false);
     }
 
-    public static void init(Context context) {
+    public static void init(List<String> modulePathList, boolean enableLoadInstalledModules) {
+        if (!hasInited.compareAndSet(false, true)) {
+            Log.e(TAG, " Xposed module has been loaded !!!");
+            return;
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            VMRuntime.setHiddenApiExemptions(new String[]{"L"});
+        }
+        Context context = XpatchUtils.createAppContext();
+        SandHookInitialization.init(context);
+
+        if ((modulePathList == null || modulePathList.size() == 0) && !enableLoadInstalledModules) {
+            Log.e(TAG, " modulePathList is null and installed module is disabled, so no xposed modules will be loaded.");
+            return;
+        }
+        loadModulesInternal(context, modulePathList, enableLoadInstalledModules);
+    }
+
+    private static void loadModulesInternal(Context context, List<String> userModulePathList, boolean enableLoadInstalledModules) {
 
         if (context == null) {
             android.util.Log.e(TAG, "try to init XposedModuleEntry, but create app context failed !!!!");
@@ -70,27 +99,28 @@ public class XposedModuleEntry {
 
         appContext = context;
 
-        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.LOLLIPOP) {
-            if (!FileUtils.isFilePermissionGranted(context)) {
-                android.util.Log.e(TAG, "File permission is not granted, can not control xposed module by file ->" +
-                        XPOSED_MODULE_FILE_PATH);
-            }
+        SharedPrefUtils.init(context);
+        ClassLoader originClassLoader = context.getClassLoader();
+        List<String> modulePathList = new ArrayList<>();
+        List<String> installedModulePathList = null;
+        if (enableLoadInstalledModules) {
+            installedModulePathList = loadAllInstalledModule(context);
         }
 
-        initSELinux(context);
-
-        SharedPrefUtils.init(context);
-
-        ClassLoader originClassLoader = context.getClassLoader();
-
-        // 加载代码本身的hook功能，一般情况下用不到
-        XposedModuleLoader.startInnerHook(context.getApplicationInfo(), originClassLoader);
-
-        List<String> modulePathList = new ArrayList<>();
-
-        List<String> installedModulePathList = loadAllInstalledModule(context);
-
-        insertXposedModulesFromLibPath(context, modulePathList);
+        if (userModulePathList != null && userModulePathList.size() > 0) {
+            for (String path : userModulePathList) {
+                if (path != null && path.length() > 0 && new File(path).exists()) {
+                    String packageName = getPackageNameByPath(context, path);
+                    if (packageName != null && packageName.length() > 0) {
+                        modulePathList.add(path);
+                    } else {
+                        Log.e(TAG, " Xposed module file path is invalid.  The file is not an apk file!!!, path -> " + path);
+                    }
+                } else {
+                    Log.e(TAG, " Xposed module file path is invalid!!!  path -> " + path);
+                }
+            }
+        }
 
         // 过滤掉已经打包在apk中的module，避免同一个module被加载了两次
         if (installedModulePathList != null && installedModulePathList.size() > 0) {
@@ -118,11 +148,29 @@ public class XposedModuleEntry {
             }
         }
 
+        String appPrivateDir = context.getFilesDir().getParentFile().getAbsolutePath();
         for (String modulePath : modulePathList) {
             String dexPath = context.getDir("xposed_plugin_dex", Context.MODE_PRIVATE).getAbsolutePath();
             if (!TextUtils.isEmpty(modulePath)) {
-                Log.d(TAG, "Current truely loaded module path ----> " + modulePath);
-                XposedModuleLoader.loadModule(modulePath, dexPath, null, context.getApplicationInfo(), originClassLoader);
+                String packageName = getPackageNameByPath(context, modulePath);
+                Log.d(TAG, "Current truely loaded module path ----> " + modulePath + " packageName: " + packageName);
+                String pathNameSuffix = packageName;
+                if (pathNameSuffix == null || pathNameSuffix.isEmpty()) {
+                    pathNameSuffix = XpatchUtils.strMd5(modulePath);
+                }
+
+                String xposedPluginFilePath = appPrivateDir + "/xpatch_plugin_native_lib/plugin_" + pathNameSuffix;
+
+                String soFilePath;
+                if (NativeLibraryHelperCompat.is64bit()) {
+                    soFilePath = xposedPluginFilePath + "/lib/arm64";
+                } else {
+                    soFilePath = xposedPluginFilePath + "/lib/arm";
+                }
+                // 将插件apk中的so文件释放到soFilePath目录下
+                PluginNativeLibExtractor.copySoFileIfNeeded(context, soFilePath, modulePath);
+
+                XposedModuleLoader.loadModule(modulePath, dexPath, soFilePath, context.getApplicationInfo(), originClassLoader);
             }
         }
     }
@@ -131,42 +179,9 @@ public class XposedModuleEntry {
         return PackageNameCache.getInstance(context).getPackageNameByPath(apkPath);
     }
 
-        // insert xposed modules saved in the lib path
-    private static void insertXposedModulesFromLibPath(Context context, List<String> modulePathList) {
-        String libPath = context.getApplicationInfo().nativeLibraryDir;
-        XLog.d(TAG, "Current loaded module libPath ----> " + libPath);
-
-        File libFileParent = new File(libPath);
-        if (!libFileParent.exists()) {
-            return;
-        }
-
-        File[] childFileList = libFileParent.listFiles();
-        if (childFileList != null && childFileList.length > 0) {
-            for (File libFile : childFileList) {
-                String fileName = libFile.getName();
-                if (fileName.startsWith(XPOSED_MODULE_FILE_NAME_PREFIX)) {
-                    XLog.d(TAG, "add xposed modules from libPath, this lib path is --> " + libFile);
-                    modulePathList.add(libFile.getAbsolutePath());
-                }
-            }
-        }
-    }
-
-    private static void initSELinux(Context context) {
-        XposedHelper.initSeLinux(context.getApplicationInfo().processName);
-    }
-
     private static List<String> loadAllInstalledModule(Context context) {
         PackageManager pm = context.getPackageManager();
         List<String> modulePathList = new ArrayList<>();
-//        modulePathList.add("mnt/sdcard/app-debug.apk");
-
-        List<String> packageNameList = loadPackageNameListFromFile(true);
-        List<Pair<String, String>> installedModuleList = new ArrayList<>();
-
-        boolean configFileExist = configFileExist();
-
         List<PackageInfo> packageInfoList = pm.getInstalledPackages(PackageManager.GET_META_DATA);
         for (PackageInfo pkg : packageInfoList) {
             ApplicationInfo app = pkg.applicationInfo;
@@ -174,120 +189,16 @@ public class XposedModuleEntry {
                 continue;
             if (app.metaData != null && app.metaData.containsKey("xposedmodule")) {
                 String apkPath = pkg.applicationInfo.publicSourceDir;
-                String apkName = context.getPackageManager().getApplicationLabel(pkg.applicationInfo).toString();
                 if (TextUtils.isEmpty(apkPath)) {
                     apkPath = pkg.applicationInfo.sourceDir;
                 }
-                if (!TextUtils.isEmpty(apkPath) && (!configFileExist || packageNameList == null || packageNameList
-                        .contains(app.packageName))) {
+                if (!TextUtils.isEmpty(apkPath)) {
                     XLog.d(TAG, " query installed module path -> " + apkPath);
                     modulePathList.add(apkPath);
                 }
-                installedModuleList.add(Pair.create(pkg.applicationInfo.packageName, apkName));
             }
         }
-
-        final List<Pair<String, String>> installedModuleListFinal = installedModuleList;
-
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                List<String> savedPackageNameList = loadPackageNameListFromFile(false);
-                if (savedPackageNameList == null) {
-                    savedPackageNameList = new ArrayList<>();
-                }
-                List<Pair<String, String>> addPackageList = new ArrayList<>();
-                for (Pair<String, String> packgagePair : installedModuleListFinal) {
-                    if (!savedPackageNameList.contains(packgagePair.first)) {
-                        XLog.d(TAG, " addPackageList packgagePair -> " + packgagePair);
-                        addPackageList.add(packgagePair);
-                    }
-                }
-                appendPackageNameToFile(addPackageList);
-            }
-        }).start();
         return modulePathList;
-    }
-
-    // 从sd卡中加载指定文件，以加载指定的xposed module
-    private static List<String> loadPackageNameListFromFile(boolean loadActivedPackages) {
-        File moduleFile = new File(DIR_BASE, XPOSED_MODULE_FILE_PATH);
-        if (!moduleFile.exists()) {
-            return null;
-        }
-        if (!moduleFile.getParentFile().exists()) {
-            moduleFile.getParentFile().mkdirs();
-        }
-        List<String> modulePackageList = new ArrayList<>();
-
-        FileInputStream fileInputStream = null;
-        BufferedReader bufferedReader = null;
-        try {
-            fileInputStream = new FileInputStream(moduleFile);
-            bufferedReader = new BufferedReader(new InputStreamReader(fileInputStream));
-            String modulePackageName;
-            while ((modulePackageName = bufferedReader.readLine()) != null) {
-                modulePackageName = modulePackageName.trim();
-                if (modulePackageName.isEmpty() || (modulePackageName.startsWith("#") && loadActivedPackages)) {
-                    continue;
-                }
-
-                if (modulePackageName.startsWith("#")) {
-                    modulePackageName = modulePackageName.substring(1);
-                }
-                int index = modulePackageName.indexOf("#");
-                if (index > 0) {
-                    modulePackageName = modulePackageName.substring(0, index);
-                }
-                XLog.d(TAG, " load xposed_module.txt file result,  modulePackageName -> " + modulePackageName);
-                modulePackageList.add(modulePackageName);
-            }
-
-        } catch (IOException e) {
-            e.printStackTrace();
-            return null;
-        } finally {
-            closeStream(fileInputStream);
-            closeStream(bufferedReader);
-        }
-        return modulePackageList;
-    }
-
-    private static void appendPackageNameToFile(List<Pair<String, String>> packageNameList) {
-
-        if (isEmpty(packageNameList)) {
-            return;
-        }
-
-        File moduleFile = new File(DIR_BASE, XPOSED_MODULE_FILE_PATH);
-
-        if (!moduleFile.getParentFile().exists()) {
-            moduleFile.getParentFile().mkdirs();
-        }
-
-        FileOutputStream outputStream = null;
-        BufferedWriter writer = null;
-        try {
-            outputStream = new FileOutputStream(moduleFile, true);
-            writer = new BufferedWriter(new OutputStreamWriter(outputStream));
-
-            for (Pair<String, String> packageInfo : packageNameList) {
-                String packageName = packageInfo.first;
-                String appName = packageInfo.second;
-                writer.write("\n\n" + packageName + "#" + appName);
-            }
-            writer.flush();
-        } catch (Exception e) {
-            e.printStackTrace();
-        } finally {
-            closeStream(outputStream);
-            closeStream(writer);
-        }
-    }
-
-    private static boolean configFileExist() {
-        File moduleConfigFile = new File(DIR_BASE, XPOSED_MODULE_FILE_PATH);
-        return moduleConfigFile.exists();
     }
 
     private static void closeStream(Closeable closeable) {

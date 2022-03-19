@@ -9,6 +9,8 @@ import android.util.Log;
 import com.wind.xposed.entry.XposedModuleEntry;
 
 import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.List;
 
 //import de.robv.android.xposed.XC_MethodHook;
 //import de.robv.android.xposed.XposedBridge;
@@ -18,8 +20,13 @@ import java.lang.reflect.Method;
 public class XposedTestApplication extends Application {
 
     static {
-        // 加载系统中所有已安装的Xposed Modules
-        XposedModuleEntry.init();
+        List<String> list = new ArrayList<String>() {
+            {
+                add("/mnt/sdcard/app-debug.apk");
+                add("/data/data/com.storm.wind.xposed/files/app-debug.apk");
+            }
+        };
+        XposedModuleEntry.init("/data/data/com.storm.wind.xposed/");
     }
 
     @Override
