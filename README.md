@@ -85,6 +85,9 @@ dependencies {
 # Applied
 Early version of [Xpatch](https://github.com/WindySha/Xpatch) use this library to load xposed modules。
 
+# Reference
+[SandHook](https://github.com/asLody/SandHook)
+
 # License
 ```
 Copyright 2021 WindySha
