@@ -43,7 +43,7 @@ public class XposedModuleEntry {
 
     private static AtomicBoolean hasInited = new AtomicBoolean(false);
 
-    private static final String DIR_BASE = Environment.getExternalStorageDirectory().getAbsolutePath();
+//    private static final String DIR_BASE = Environment.getExternalStorageDirectory().getAbsolutePath();
 
     private static final String XPOSED_MODULE_FILE_PATH = "xposed_config/modules.list";
 
@@ -77,7 +77,8 @@ public class XposedModuleEntry {
         // 加载代码本身的hook功能，一般情况下用不到
 //        XposedModuleLoader.startInnerHook(context.getApplicationInfo(), originClassLoader);
 
-        String appPrivateDir = context.getFilesDir().getParentFile().getAbsolutePath();
+//        String appPrivateDir = context.getFilesDir().getParentFile().getAbsolutePath();
+        String appPrivateDir = "/data/data/" + context.getPackageName();
         String xposedPluginFilePath = appPrivateDir + "/xposed_injection/plugin";
         String pluginApkFile = xposedPluginFilePath + "/xposed_plugin.apk";
         if (new File(pluginApkFile).exists()) {
@@ -89,8 +90,8 @@ public class XposedModuleEntry {
             }
             XpatchUtils.ensurePathExist(soFilePath);
             NativeLibraryHelperCompat.copyNativeBinaries(new File(pluginApkFile), new File(soFilePath));
-
             String dexPath = context.getDir("xposed_plugin_dex", Context.MODE_PRIVATE).getAbsolutePath();
+
             XposedModuleLoader.loadModule(pluginApkFile, dexPath, soFilePath, context.getApplicationInfo(), originClassLoader);
             return;
         }
@@ -169,6 +170,10 @@ public class XposedModuleEntry {
         }
     }
 
+    private static String getDirBase() {
+        return Environment.getExternalStorageDirectory().getAbsolutePath();
+    }
+
     private static void initSELinux(Context context) {
         XposedHelper.initSeLinux(context.getApplicationInfo().processName);
     }
@@ -227,7 +232,7 @@ public class XposedModuleEntry {
 
     // 从sd卡中加载指定文件，以加载指定的xposed module
     private static List<String> loadPackageNameListFromFile(boolean loadActivedPackages) {
-        File moduleFile = new File(DIR_BASE, XPOSED_MODULE_FILE_PATH);
+        File moduleFile = new File(getDirBase(), XPOSED_MODULE_FILE_PATH);
         if (!moduleFile.exists()) {
             return null;
         }
@@ -275,7 +280,7 @@ public class XposedModuleEntry {
             return;
         }
 
-        File moduleFile = new File(DIR_BASE, XPOSED_MODULE_FILE_PATH);
+        File moduleFile = new File(getDirBase(), XPOSED_MODULE_FILE_PATH);
 
         if (!moduleFile.getParentFile().exists()) {
             moduleFile.getParentFile().mkdirs();
@@ -302,7 +307,7 @@ public class XposedModuleEntry {
     }
 
     private static boolean configFileExist() {
-        File moduleConfigFile = new File(DIR_BASE, XPOSED_MODULE_FILE_PATH);
+        File moduleConfigFile = new File(getDirBase(), XPOSED_MODULE_FILE_PATH);
         return moduleConfigFile.exists();
     }
 

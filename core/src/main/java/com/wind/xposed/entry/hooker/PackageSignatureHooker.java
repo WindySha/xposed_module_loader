@@ -153,7 +153,7 @@ public class PackageSignatureHooker implements IXposedHookLoadPackage {
                     }
                 }
 
-                Integer flag = (Integer) args[1];
+                int flag = (int) args[1];
                 if (PackageManager.GET_SIGNATURES == flag) {
                     PackageInfo packageInfo = (PackageInfo) method.invoke(pmBase, args);
 
