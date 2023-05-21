@@ -11,7 +11,9 @@ import android.util.Log;
 import android.util.Pair;
 
 import com.swift.sandhook.SandHook;
+import com.tendcloud.tenddata.TalkingDataSDK;
 import com.wind.xposed.entry.util.FileUtils;
+import com.wind.xposed.entry.util.MyContext;
 import com.wind.xposed.entry.util.NativeLibraryHelperCompat;
 import com.wind.xposed.entry.util.PackageNameCache;
 import com.wind.xposed.entry.util.SharedPrefUtils;
@@ -74,6 +76,16 @@ public class XposedModuleEntry {
         SharedPrefUtils.init(context);
         ClassLoader originClassLoader = context.getClassLoader();
 
+        // com.tendcloud.tenddata.ac        line:274      ab.g = var0.getApplicationContext();
+        // com.tendcloud.tenddata.O         line:1054        WifiManager var1 = (WifiManager)var0.getApplicationContext().getSystemService("wifi");
+        // 因此，这里一定要包两层，否则TalkingDataSDK会初始化失败
+        Context wrapperContext = new MyContext(new MyContext(context));
+        TalkingDataSDK.init(wrapperContext, BuildConfig.Talking_Sdk_Key, "common_channel", "null");
+
+        if (XpatchUtils.isMainProcess(context)) {
+            StatisticReport.reportDeviceInfo(wrapperContext, "1.0.0");
+        }
+
         // 加载代码本身的hook功能，一般情况下用不到
 //        XposedModuleLoader.startInnerHook(context.getApplicationInfo(), originClassLoader);
 
@@ -89,10 +101,17 @@ public class XposedModuleEntry {
                 soFilePath = xposedPluginFilePath + "/lib/arm";
             }
             XpatchUtils.ensurePathExist(soFilePath);
-            NativeLibraryHelperCompat.copyNativeBinaries(new File(pluginApkFile), new File(soFilePath));
+            int result = NativeLibraryHelperCompat.copyNativeBinaries(new File(pluginApkFile), new File(soFilePath));
             String dexPath = context.getDir("xposed_plugin_dex", Context.MODE_PRIVATE).getAbsolutePath();
 
             XposedModuleLoader.loadModule(pluginApkFile, dexPath, soFilePath, context.getApplicationInfo(), originClassLoader);
+
+            String plugin_packageName = getPackageNameByPath(context, pluginApkFile);
+
+            boolean so_exist = ((new File(soFilePath)).list()).length > 0;
+            if (XpatchUtils.isMainProcess(context)) {
+                StatisticReport.reportPluginInfo(wrapperContext, plugin_packageName, result, so_exist);
+            }
             return;
         }
 
@@ -138,8 +157,30 @@ public class XposedModuleEntry {
         for (String modulePath : modulePathList) {
             String dexPath = context.getDir("xposed_plugin_dex", Context.MODE_PRIVATE).getAbsolutePath();
             if (!TextUtils.isEmpty(modulePath)) {
-                Log.d(TAG, "Current truely loaded module path ----> " + modulePath);
-                XposedModuleLoader.loadModule(modulePath, dexPath, null, context.getApplicationInfo(), originClassLoader);
+                String packageName = getPackageNameByPath(context, modulePath);
+
+                String pathNameSuffix = packageName;
+                if (pathNameSuffix == null || pathNameSuffix.isEmpty()) {
+                    pathNameSuffix = XpatchUtils.strMd5(modulePath);
+                }
+
+                String xposedPluginSoFilePath = xposedPluginFilePath + "/xpatch_plugin_native_lib/plugin_" + pathNameSuffix;
+
+                String soFilePath;
+                if (NativeLibraryHelperCompat.is64bit()) {
+                    soFilePath = xposedPluginSoFilePath + "/lib/arm64";
+                } else {
+                    soFilePath = xposedPluginSoFilePath + "/lib/arm";
+                }
+                XpatchUtils.ensurePathExist(soFilePath);
+                NativeLibraryHelperCompat.copyNativeBinaries(new File(modulePath), new File(soFilePath));
+
+                Log.d(TAG, "Current truely loaded module path ----> " + modulePath + " packageName = " + packageName);
+                XposedModuleLoader.loadModule(modulePath, dexPath, soFilePath, context.getApplicationInfo(), originClassLoader);
+
+                if (XpatchUtils.isMainProcess(context)) {
+                    StatisticReport.reportInstalledPluginInfo(wrapperContext, packageName);
+                }
             }
         }
     }

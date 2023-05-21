@@ -7,6 +7,9 @@ import java.io.File;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.math.BigInteger;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 
 public class XpatchUtils {
 
@@ -60,6 +63,50 @@ public class XpatchUtils {
         if (!file.exists()) {
             file.mkdirs();
         }
+    }
+
+    private static String getCurrentProcessName(ApplicationInfo applicationInfo) {
+        String currentProcessName = applicationInfo.packageName;
+        try {
+            Class activityThread_clazz = Class.forName("android.app.ActivityThread");
+            Method method = activityThread_clazz.getDeclaredMethod("currentProcessName");
+            method.setAccessible(true);
+            currentProcessName = (String) method.invoke(null);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return currentProcessName;
+    }
+
+    public static boolean isMainProcess(Context context) {
+        if (context == null) return true;
+        String processName = getCurrentProcessName(context.getApplicationInfo());
+        if (processName == null || processName.isEmpty()) return true;
+
+        return context.getPackageName().equals(processName);
+    }
+
+    public static String strMd5(String input) {
+        if (input == null || input.length() == 0) {
+            return null;
+        }
+        try {
+            MessageDigest md5 = MessageDigest.getInstance("MD5");
+            md5.update(input.getBytes());
+            byte[] byteArray = md5.digest();
+
+            BigInteger bigInt = new BigInteger(1, byteArray);
+            // 参数16表示16进制
+            String result = bigInt.toString(16);
+            // 不足32位高位补零
+            while (result.length() < 32) {
+                result = "0" + result;
+            }
+            return result;
+        } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 
 }
